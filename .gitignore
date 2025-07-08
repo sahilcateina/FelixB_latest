@@ -1,5 +1,24 @@
+# Node modules
 node_modules/
-dist/
+
+# Env files
 .env
-logs/
+
+# Build output
+dist/
+build/
+
+# Logs
+logs
 *.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
