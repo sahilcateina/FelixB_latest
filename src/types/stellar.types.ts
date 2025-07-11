@@ -4,15 +4,16 @@ import { Horizon } from '@stellar/stellar-sdk';
 export interface StellarResult {
     success: boolean;
     message: string;
-   // result?: Horizon.SubmitTransactionResponse;
+    result?: Horizon.SubmitTransactionResponse; // ✅ Add this line
     error?: any;
     publicKey?: string;
     secretKey?: string;
     balance?: string;
     asset?: string;
-    offers?: any[]; // Consider a more specific type for Horizon.OfferRecord
-    account?: Horizon.AccountResponse; // For account details
+    offers?: any[];
+    account?: Horizon.AccountResponse;
 }
+
 
 export interface BludIssueRequest {
     destinationPublicKey: string;
@@ -47,3 +48,37 @@ export interface AccountBalanceRequest {
     assetCode?: string;
     issuer?: string;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+export interface CreateCurrencyRequest {
+    issuerSecret: string;
+    distributorPublicKey: string;
+    assetCode: string;
+    amount: string;
+  }
+  
+  export interface ChangeTrustlineRequest {
+    accountSecret: string;
+    assetCode: string;
+    issuerPublicKey: string;
+    limit?: string;
+  }
+  
+
+  export interface OfferRequest {
+    sourceSecret: string;
+    amount: string;
+    price: string; // Price per BLUD in XLM (example: "1.5")
+    offerId?: string; // "0" for new offer, or existing offer ID to update
+  }

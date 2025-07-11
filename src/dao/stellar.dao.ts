@@ -1,12 +1,35 @@
-import { Server } from '@stellar/stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-const server = new Server('https://horizon-testnet.stellar.org');
+dotenv.config();
+
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for write access
+  );
+  
+
+  const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
 
 export const loadAccount = (publicKey: string) => server.loadAccount(publicKey);
-export const submitTransaction = (xdr: string) => server.submitTransaction(xdr);
+//export const submitTransaction = (xdr: string) => server.submitTransaction(xdr);
 
 
-
+export const saveStellarAccount = async (publicKey: string, secretKey: string) => {
+    const { data, error } = await supabase
+      .from('stellar_accounts')
+      .insert([{ 
+        public_key: publicKey,
+        secret_key: secretKey
+    }]);
+  
+    if (error) {
+      throw new Error(`Error saving Stellar account: ${error.message}`);
+    }
+  
+    return data;
+  };
 
 
 

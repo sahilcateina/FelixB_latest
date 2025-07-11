@@ -1,18 +1,28 @@
 // src/routes/stellar.route.ts
 import express from 'express';
-import { createStellarAccount, sendLumens, establishTrustline, issueBlud } from '../controllers/stellar.controller';
+import * as stellarController from '../controllers/stellar.controller';
 
 const router = express.Router();
 
-router.post('/account/create', createStellarAccount);
-router.post('/transaction/send', sendLumens);
-router.post('/trustline', establishTrustline); 
+router.post('/account/create', stellarController.createStellarAccount);
+router.post('/transaction/send', stellarController.sendLumens);
+router.post('/currency/create', stellarController.handleCreateCurrency);
+router.post('/trustline/change', stellarController.handleChangeTrustline);
 
-router.post('/issue-blud', issueBlud);
+
+
+router.post('/offer/sell', stellarController.placeSellOffer);
+router.post('/offer/buy', stellarController.placeBuyOffer);
+
+
+
+
+
+// router.post('/trustline', establishTrustline); 
+
+//router.post('/issue-blud', issueBlud);
 
 export default router;
-
-
 
 
 
