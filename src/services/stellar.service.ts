@@ -1,5 +1,6 @@
 // src/services/stellar.service.ts
 import { Horizon, Keypair, Networks, TransactionBuilder, Operation, Asset } from '@stellar/stellar-sdk';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import Server from "@stellar/stellar-sdk";
 import { Transaction } from '@stellar/stellar-sdk';
 import * as stellarDao from '../dao/stellar.dao';
@@ -7,7 +8,7 @@ import * as StellarTypes from '../types/stellar.types';
 const server = new Horizon.Server('https://horizon-testnet.stellar.org');
 
 
-export const BLUD_ASSET = new Asset('BLUD', 'GDQKTZNJ5EYRYE7SXSGIWR3NKOCMPAP3VW2LXQDWYXODVWJFLZ4C34QN');
+export const BLUD_ASSET = new Asset('BLUD', 'GAHPJJR5VZNEU3PXUUNI7HAG4D7USDBPJCZRLZDFIBMPWEMRWR7D3O2D');
 
 export const createAccount = async () => {
   const pair = Keypair.random();
@@ -142,258 +143,132 @@ export const changeTrustline = async ({
     };
   }
 };
-
-
-
-
-
-
-
-
-
-
-export const sellBLUD = async ({
-  sourceSecret,
-  amount,
-  price,
-  offerId = '0',
-}: StellarTypes.OfferRequest): Promise<StellarTypes.StellarResult> => {
+export const sellService = async ({
+  sellerSecret,
+  serviceName,
+  description,
+  bludAmount
+}: StellarTypes.SellServiceRequest): Promise<StellarTypes.StellarResult> => {
   try {
-    const keypair = Keypair.fromSecret(sourceSecret);
-    const account = await server.loadAccount(keypair.publicKey());
+    const sellerKeypair = Keypair.fromSecret(sellerSecret);
+    const sellerAccount = await server.loadAccount(sellerKeypair.publicKey());
 
-    const operation = Operation.manageSellOffer({
-      selling: BLUD_ASSET,
-      buying: Asset.native(), // XLM
-      amount,
-      price,
-      offerId,
+    console.log('BALANCES:', sellerAccount.balances);
+    // Check if BLUD balance exists and is sufficient
+    const bludBalance = sellerAccount.balances.find(
+      b =>
+        'asset_code' in b &&
+        b.asset_code === BLUD_ASSET.code &&
+        'asset_issuer' in b &&
+        b.asset_issuer === BLUD_ASSET.issuer
+    );
+
+    if (!bludBalance || parseFloat((bludBalance as any).balance) < parseFloat(bludAmount)) {
+      return {
+        success: false,
+        message: 'Insufficient BLUD balance to list service'
+      };
+    }
+
+    const service = await stellarDao.createService({
+      seller_public_key: sellerKeypair.publicKey(),
+      name: serviceName,
+      description,
+      blud_price: bludAmount,
+      status: 'available'
     });
-
-    const transaction = new TransactionBuilder(account, {
-      fee: '100',
-      networkPassphrase: Networks.TESTNET,
-    })
-      .addOperation(operation)
-      .setTimeout(30)
-      .build();
-
-    transaction.sign(keypair);
-    const result = await server.submitTransaction(transaction);
 
     return {
       success: true,
-      message: `Sell offer placed to sell ${amount} BLUD @ ${price} XLM`,
-      result,
+      message: 'Service listed for sale successfully',
+      result: service
     };
   } catch (error: any) {
-    const errorMsg = error?.response?.data?.extras?.result_codes
-      ? JSON.stringify(error.response.data.extras.result_codes, null, 2)
-      : error.message;
-
     return {
       success: false,
-      message: 'Failed to place sell offer',
-      error: errorMsg,
+      message: 'Failed to list service',
+      error: error.message
     };
   }
 };
 
-export const buyBLUD = async ({
-  sourceSecret,
-  amount,
-  price,
-  offerId = '0',
-}: StellarTypes.OfferRequest): Promise<StellarTypes.StellarResult> => {
+
+export const buyService = async ({
+  buyerSecret,
+  serviceId
+}: StellarTypes.BuyServiceRequest): Promise<StellarTypes.StellarResult> => {
   try {
-    const keypair = Keypair.fromSecret(sourceSecret);
-    const account = await server.loadAccount(keypair.publicKey());
+    const service = await stellarDao.getService(serviceId);
+    if (!service || service.status !== 'available') {
+      return {
+        success: false,
+        message: 'Service not available for purchase'
+      };
+    }
 
-    const operation = Operation.manageBuyOffer({
-      buying: BLUD_ASSET,
-      selling: Asset.native(), // XLM
-      buyAmount: amount,
-      price,
-      offerId,
-    });
+    const buyerKeypair = Keypair.fromSecret(buyerSecret);
+    const buyerAccount = await server.loadAccount(buyerKeypair.publicKey());
 
-    const transaction = new TransactionBuilder(account, {
+    console.log('Buyer Balances:', buyerAccount.balances);
+    const hasTrustline = buyerAccount.balances.some(
+      b =>
+        'asset_code' in b &&
+        b.asset_code === BLUD_ASSET.code &&
+        'asset_issuer' in b &&
+        b.asset_issuer === BLUD_ASSET.issuer
+    );
+
+    if (!hasTrustline) {
+      return {
+        success: false,
+        message: 'Buyer needs to establish a trustline for BLUD first'
+      };
+    }
+
+    const transaction = new TransactionBuilder(buyerAccount, {
       fee: '100',
       networkPassphrase: Networks.TESTNET,
     })
-      .addOperation(operation)
+      .addOperation(Operation.payment({
+        destination: service.seller_public_key,
+        asset: BLUD_ASSET,
+        amount: service.blud_price,
+      }))
       .setTimeout(30)
       .build();
 
-    transaction.sign(keypair);
-    const result = await server.submitTransaction(transaction);
+    transaction.sign(buyerKeypair);
+    const paymentResult = await server.submitTransaction(transaction);
+
+    await stellarDao.updateService(serviceId, { status: 'sold' });
+
+    const serviceTransaction = await stellarDao.createServiceTransaction({
+      service_id: serviceId,
+      buyer_public_key: buyerKeypair.publicKey(),
+      seller_public_key: service.seller_public_key,
+      blud_amount: service.blud_price,
+      transaction_hash: paymentResult.hash
+    });
 
     return {
       success: true,
-      message: `Buy offer placed to buy ${amount} BLUD @ ${price} XLM`,
-      result,
+      message: 'Service purchased successfully',
+      result: {
+        payment: paymentResult,
+        transactionRecord: serviceTransaction
+      }
     };
   } catch (error: any) {
-    const parsedError = error?.response?.data ?? error.message;
-    return {
-      success: false,
-      message: 'Failed to place buy offer',
-      error: typeof parsedError === 'string' ? parsedError : JSON.stringify(parsedError, null, 2),
+  console.error('Buy Service Error:', error?.response?.data || error.message || error);
+  return {
+    success: false,
+    message: 'Failed to purchase service',
+    error: error?.response?.data || error.message
   };
-  }
-};
+}
+}
 
 
-
-
-
-
-
-// export const establishBLUDTrustline = async (
-//     accountSecret: string,
-//     limit: string = '100000'
-//   ) => {
-//     const keypair = Keypair.fromSecret(accountSecret);
-//     const account = await server.loadAccount(keypair.publicKey());
-  
-//     const transaction = new TransactionBuilder(account, {
-//       fee: '100',
-//       networkPassphrase: Networks.TESTNET,
-//     })
-//       .addOperation(Operation.changeTrust({ asset: BLUD_ASSET, limit }))
-//       .setTimeout(30)
-//       .build();
-  
-//     transaction.sign(keypair);
-//     const result = await server.submitTransaction(transaction);
-  
-//     return {
-//       success: true,
-//       message: `Trustline for BLUD established with limit ${limit}`,
-//       result,
-//     };
-//   };
-  
-  // export const submitSignedTransactionXDR = async (signedXDR: string) => {
-  //   try {
-  //     // ✅ Convert XDR string back into a Transaction object
-  //     const transaction = TransactionBuilder.fromXDR(signedXDR, Networks.TESTNET);
-  
-  //     // ✅ Submit the transaction object
-  //     const result = await server.submitTransaction(transaction);
-  
-  //     return {
-  //       success: true,
-  //       message: 'Pre-signed transaction submitted successfully',
-  //       result,
-  //     };
-  //   } catch (e: any) {
-  //     const errorMsg =
-  //       e.response?.data?.extras?.result_codes
-  //         ? JSON.stringify(e.response.data.extras.result_codes, null, 2)
-  //         : e.message;
-  //     return {
-  //       success: false,
-  //       message: 'Failed to submit signed transaction',
-  //       error: errorMsg,
-  //     };
-  //   }
-  // };
-  
-
-
-  // export const issueBLUD = async (
-  //   issuerSecret: string,
-  //   destinationPublicKey: string,
-  //   amount: string
-  // ): Promise<{ success: boolean; message: string; result?: any; error?: string }> => {
-  //   const issuerKeypair = Keypair.fromSecret(issuerSecret);
-  
-  //   if (issuerKeypair.publicKey() !== BLUD_ASSET.issuer) {
-  //     return {
-  //       success: false,
-  //       message: 'Provided issuerSecret does not match BLUD asset issuer.',
-  //     };
-  //   }
-  
-  //   try {
-  //     const destAccount = await stellarDao.loadAccount(destinationPublicKey);
-  //     const hasTrustline = destAccount.balances.some(
-  //       (b) => b.asset_code === BLUD_ASSET.code && b.asset_issuer === BLUD_ASSET.issuer
-  //     );
-  
-  //     if (!hasTrustline) {
-  //       return {
-  //         success: false,
-  //         message: `Destination account does not have a trustline for BLUD.`,
-  //       };
-  //     }
-  //   } catch (e: any) {
-  //     if (e.response?.status === 404) {
-  //       return {
-  //         success: false,
-  //         message: `Destination account does not exist.`,
-  //       };
-  //     }
-  //     throw e;
-  //   }
-  
-  //   const operation = Operation.payment({
-  //     destination: destinationPublicKey,
-  //     asset: BLUD_ASSET,
-  //     amount,
-  //   });
-  
-  //   const sourceAccount = await server.loadAccount(issuerKeypair.publicKey());
-  
-  //   const transaction = new TransactionBuilder(sourceAccount, {
-  //     fee: '100',
-  //     networkPassphrase: Networks.TESTNET,
-  //   })
-  //     .addOperation(operation)
-  //     .setTimeout(30)
-  //     .build();
-  
-  //   transaction.sign(issuerKeypair);
-  //   const result = await server.submitTransaction(transaction);
-  
-  //   return {
-  //     success: true,
-  //     message: `Issued ${amount} BLUD to ${destinationPublicKey}`,
-  //     result,
-  //   };
-  // };
-
-
-
-  // export const buildAndSubmit = async (
-  //   sourceKeypair: Keypair,
-  //   operations: any[],
-  //   memoText = ''
-  // ) => {
-  //   const account = await server.loadAccount(sourceKeypair.publicKey());
-  
-  //   const txBuilder = new TransactionBuilder(account, {
-  //     fee: '100',
-  //     networkPassphrase: Networks.TESTNET,
-  //   });
-  
-  //   for (const op of operations) {
-  //     txBuilder.addOperation(op);
-  //   }
-  
-  //   if (memoText) txBuilder.addMemo(Memo.text(memoText));
-  //   const tx = txBuilder.setTimeout(30).build();
-  
-  //   tx.sign(sourceKeypair);
-  
-  //   const result = await server.submitTransaction(tx);
-  //   return {
-  //     success: true,
-  //     message: `Transaction successful: ${memoText}`,
-  //     result,
-  //   };
-  // };
 
 
 

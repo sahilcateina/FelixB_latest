@@ -50,29 +50,38 @@ export const handleChangeTrustline = async (req: Request, res: Response) => {
 };
 
 
-
-export const placeSellOffer = async (req: Request, res: Response) => {
+export const sellService = async (req: Request, res: Response) => {
   try {
-    const result = await stellarService.sellBLUD(req.body);
-    res.status(result.success ? 200 : 500).json(result);
+    const { sellerSecret, serviceName, description, bludAmount } = req.body;
+    const result = await stellarService.sellService({ 
+      sellerSecret, 
+      serviceName, 
+      description, 
+      bludAmount 
+    });
+    res.status(result.success ? 200 : 400).json(result);
   } catch (error: any) {
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: 'Sell BLUD offer failed',
-      error: error.message,
+      message: 'Failed to list service for sale',
+      error: error.message 
     });
   }
 };
 
-export const placeBuyOffer = async (req: Request, res: Response) => {
+export const buyService = async (req: Request, res: Response) => {
   try {
-    const result = await stellarService.buyBLUD(req.body);
-    res.status(result.success ? 200 : 500).json(result);
+    const { buyerSecret, serviceId } = req.body;
+    const result = await stellarService.buyService({ 
+      buyerSecret, 
+      serviceId 
+    });
+    res.status(result.success ? 200 : 400).json(result);
   } catch (error: any) {
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: 'Buy BLUD offer failed',
-      error: error.message,
+      message: 'Failed to purchase service',
+      error: error.message 
     });
   }
 };
@@ -81,56 +90,6 @@ export const placeBuyOffer = async (req: Request, res: Response) => {
 
 
 
-// export const establishTrustline = async (req: Request, res: Response): Promise<void> => {
-//   const { accountSecret, signedXDR, limit } = req.body;
-
-//   if (!accountSecret && !signedXDR) {
-//     res.status(400).json({
-//       success: false,
-//       message: 'Either accountSecret or signedXDR is required.',
-//     });
-//     return; // Add explicit return without value
-//   }
-
-//   try {
-//     let result;
-
-//     if (signedXDR) {
-//       result = await stellarService.submitSignedTransactionXDR(signedXDR);
-//     } else {
-//       result = await stellarService.establishBLUDTrustline(accountSecret, limit);
-//     }
-
-//     res.status(200).json(result);
-//   } catch (error: any) {
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error establishing trustline',
-//       error: error.message,
-//     });
-//   }
-// };
-
-
-// export const issueBlud = async (req: Request, res: Response): Promise<void> =>{
-//   const { destinationPublicKey, amount } = req.body;
-
-//   const issuerSecret = process.env.BLUD_ISSUER_SECRET_KEY;
-//   if (!issuerSecret) {
-//     res.status(500).json({ success: false, message: 'Issuer secret not configured in environment.' });
-//   }
-
-//   try {
-//     const result = await stellarService.issueBLUD(issuerSecret, destinationPublicKey, amount);
-//     if (result.success) {
-//       res.json(result);
-//     } else {
-//       res.status(500).json(result);
-//     }
-//   } catch (error: any) {
-//     res.status(500).json({ success: false, message: 'Issue BLUD failed', error: error.message });
-//   }
-// };
 
 
 

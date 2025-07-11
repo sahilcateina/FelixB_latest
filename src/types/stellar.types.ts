@@ -50,13 +50,39 @@ export interface AccountBalanceRequest {
 }
 
 
+export interface SellServiceRequest {
+    sellerSecret: string;
+    serviceName: string;
+    description: string;
+    bludAmount: string;
+  }
+  
+  export interface BuyServiceRequest {
+    buyerSecret: string;
+    serviceId: string;
+  }
 
 
+  export interface Service {
+    id?: string;
+    seller_public_key: string;
+    name: string;
+    description: string;
+    blud_price: string;
+    status: 'available' | 'sold' | 'cancelled';
+    created_at?: string;
+  }
 
 
-
-
-
+  export interface ServiceTransaction {
+    id?: string;
+    service_id: string;
+    buyer_public_key: string;
+    seller_public_key: string;
+    blud_amount: string;
+    transaction_hash: string;
+    created_at?: string;
+  }
 
 
 

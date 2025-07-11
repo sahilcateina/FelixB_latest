@@ -8,19 +8,9 @@ router.post('/account/create', stellarController.createStellarAccount);
 router.post('/transaction/send', stellarController.sendLumens);
 router.post('/currency/create', stellarController.handleCreateCurrency);
 router.post('/trustline/change', stellarController.handleChangeTrustline);
+router.post('/service/sell', stellarController.sellService);
+router.post('/service/buy', stellarController.buyService);
 
-
-
-router.post('/offer/sell', stellarController.placeSellOffer);
-router.post('/offer/buy', stellarController.placeBuyOffer);
-
-
-
-
-
-// router.post('/trustline', establishTrustline); 
-
-//router.post('/issue-blud', issueBlud);
 
 export default router;
 
