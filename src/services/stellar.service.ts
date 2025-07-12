@@ -270,6 +270,30 @@ export const buyService = async ({
 
 
 
+export const getAccountBalance = async (publicKey: string): Promise<StellarTypes.StellarResult> => {
+  try {
+    const account = await server.loadAccount(publicKey);
+    
+    const balances = account.balances.map(b => ({
+      asset_type: b.asset_type,
+      asset_code: 'asset_code' in b ? b.asset_code : 'XLM',
+      asset_issuer: 'asset_issuer' in b ? b.asset_issuer : 'native',
+      balance: b.balance
+    }));
+
+    return {
+      success: true,
+      message: 'Account balances fetched successfully',
+      result: balances,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: 'Failed to fetch account balance',
+      error: error.message,
+    };
+  }
+};
 
 
 

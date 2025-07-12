@@ -87,6 +87,21 @@ export const buyService = async (req: Request, res: Response) => {
 };
 
 
+export const getAccountBalance = async (req: Request, res: Response) => {
+  try {
+    const { publicKey } = req.params;
+    const result = await stellarService.getAccountBalance(publicKey);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch account balance',
+      error: error.message,
+    });
+  }
+};
+
+
 
 
 

@@ -11,6 +11,9 @@ router.post('/trustline/change', stellarController.handleChangeTrustline);
 router.post('/service/sell', stellarController.sellService);
 router.post('/service/buy', stellarController.buyService);
 
+router.get('/account/balance/:publicKey', stellarController.getAccountBalance);
+
+
 
 export default router;
 
