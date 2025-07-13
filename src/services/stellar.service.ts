@@ -66,12 +66,89 @@ export const sendXLM = async (
 
 
 
-export const createCurrency = async ({
+// export const createCurrency = async ({
+//   issuerSecret,
+//   distributorPublicKey,
+//   assetCode,
+//   amount,
+// }: StellarTypes.CreateCurrencyRequest): Promise<StellarTypes.StellarResult> => {
+//   try {
+//     const issuerKeypair = Keypair.fromSecret(issuerSecret);
+//     const issuerAccount = await server.loadAccount(issuerKeypair.publicKey());
+//     const customAsset = new Asset(assetCode, issuerKeypair.publicKey());
+
+//     const transaction = new TransactionBuilder(issuerAccount, {
+//       fee: '100',
+//       networkPassphrase: Networks.TESTNET,
+//     })
+//       .addOperation(Operation.payment({
+//         destination: distributorPublicKey,
+//         asset: customAsset,
+//         amount,
+//       }))
+//       .setTimeout(30)
+//       .build();
+
+//     transaction.sign(issuerKeypair);
+//     const result = await server.submitTransaction(transaction);
+
+//     return {
+//       success: true,
+//       message: `Issued ${amount} ${assetCode} to ${distributorPublicKey}`,
+//       result,
+//     };
+//   } catch (error: any) {
+//     console.error('Issue Token Error:', error?.response?.data || error.message || error);
+//     return {
+//       success: false,
+//       message: 'Failed to issue token',
+//       error: error?.response?.data || error.message
+//     };
+//   }
+// };
+
+
+export const createAssetOnly = async ({
   issuerSecret,
-  distributorPublicKey,
+  assetCode,
+}: {
+  issuerSecret: string;
+  assetCode: string;
+}): Promise<StellarTypes.StellarResult> => {
+  try {
+    const issuerKeypair = Keypair.fromSecret(issuerSecret);
+    const issuerAccount = await server.loadAccount(issuerKeypair.publicKey());
+    const customAsset = new Asset(assetCode, issuerKeypair.publicKey());
+
+    // Dummy transaction to "register" asset (optional in real Stellar, for bookkeeping)
+    return {
+      success: true,
+      message: `Asset ${assetCode} is now defined under issuer ${issuerKeypair.publicKey()}`,
+      result: {
+        asset_code: assetCode,
+        issuer: issuerKeypair.publicKey()
+      }
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: 'Failed to define asset',
+      error: error.message,
+    };
+  }
+};
+
+export const sendAsset = async ({
+  issuerSecret,
+  receiverPublicKey,
   assetCode,
   amount,
-}: StellarTypes.CreateCurrencyRequest): Promise<StellarTypes.StellarResult> => {
+}: {
+  issuerSecret: string;
+  receiverPublicKey: string;
+  assetCode: string;
+  amount: string;
+}): Promise<StellarTypes.StellarResult> => {
   try {
     const issuerKeypair = Keypair.fromSecret(issuerSecret);
     const issuerAccount = await server.loadAccount(issuerKeypair.publicKey());
@@ -82,7 +159,7 @@ export const createCurrency = async ({
       networkPassphrase: Networks.TESTNET,
     })
       .addOperation(Operation.payment({
-        destination: distributorPublicKey,
+        destination: receiverPublicKey,
         asset: customAsset,
         amount,
       }))
@@ -94,17 +171,18 @@ export const createCurrency = async ({
 
     return {
       success: true,
-      message: `Issued ${amount} ${assetCode} to ${distributorPublicKey}`,
+      message: `Sent ${amount} ${assetCode} to ${receiverPublicKey}`,
       result,
     };
   } catch (error: any) {
     return {
       success: false,
-      message: 'Failed to issue token',
+      message: 'Failed to send asset',
       error: error.message,
     };
   }
 };
+
 
 
 export const changeTrustline = async ({
@@ -143,6 +221,8 @@ export const changeTrustline = async ({
     };
   }
 };
+
+
 export const sellService = async ({
   sellerSecret,
   serviceName,

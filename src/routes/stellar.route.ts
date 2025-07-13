@@ -6,8 +6,12 @@ const router = express.Router();
 
 router.post('/account/create', stellarController.createStellarAccount);
 router.post('/transaction/send', stellarController.sendLumens);
-router.post('/currency/create', stellarController.handleCreateCurrency);
+
+// router.post('/currency/create', stellarController.handleCreateCurrency);
+router.post('/currency/create', stellarController.handleCreateAssetOnly);
+router.post('/currency/send', stellarController.handleSendAsset);
 router.post('/trustline/change', stellarController.handleChangeTrustline);
+
 router.post('/service/sell', stellarController.sellService);
 router.post('/service/buy', stellarController.buyService);
 

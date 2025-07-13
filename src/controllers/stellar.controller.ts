@@ -23,18 +23,46 @@ export const sendLumens = async (req: Request, res: Response) => {
 
 
 
-export const handleCreateCurrency = async (req: Request, res: Response) => {
+// export const handleCreateCurrency = async (req: Request, res: Response) => {
+//   try {
+//     const result = await stellarService.createCurrency(req.body);
+//     res.status(result.success ? 200 : 500).json(result);
+//   } catch (error: any) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Currency creation failed',
+//       error: error.message,
+//     });
+//   }
+// };
+
+export const handleCreateAssetOnly = async (req: Request, res: Response) => {
   try {
-    const result = await stellarService.createCurrency(req.body);
+    const result = await stellarService.createAssetOnly(req.body);
     res.status(result.success ? 200 : 500).json(result);
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Currency creation failed',
+      message: 'Asset creation failed',
       error: error.message,
     });
   }
 };
+
+export const handleSendAsset = async (req: Request, res: Response) => {
+  try {
+    const result = await stellarService.sendAsset(req.body);
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Asset sending failed',
+      error: error.message,
+    });
+  }
+};
+
+
 
 export const handleChangeTrustline = async (req: Request, res: Response) => {
   try {
