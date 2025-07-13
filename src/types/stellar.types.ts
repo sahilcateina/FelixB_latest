@@ -51,16 +51,22 @@ export interface AccountBalanceRequest {
 
 
 export interface SellServiceRequest {
-    sellerSecret: string;
-    serviceName: string;
-    description: string;
-    bludAmount: string;
-  }
+  sellerSecret: string;
+  serviceName: string;
+  description: string;
+  bludAmount: string;
+  assetCode: string;
+  issuerPublicKey: string;
+}
+
   
-  export interface BuyServiceRequest {
-    buyerSecret: string;
-    serviceId: string;
-  }
+export interface BuyServiceRequest {
+  buyerSecret: string;
+  serviceId: string;
+  assetCode: string;
+  issuerPublicKey: string;
+}
+
 
 
   export interface Service {

@@ -80,13 +80,17 @@ export const handleChangeTrustline = async (req: Request, res: Response) => {
 
 export const sellService = async (req: Request, res: Response) => {
   try {
-    const { sellerSecret, serviceName, description, bludAmount } = req.body;
+    const { sellerSecret, serviceName, description, bludAmount, assetCode, issuerPublicKey } = req.body;
+
     const result = await stellarService.sellService({ 
       sellerSecret, 
       serviceName, 
       description, 
-      bludAmount 
+      bludAmount,
+      assetCode,
+      issuerPublicKey
     });
+
     res.status(result.success ? 200 : 400).json(result);
   } catch (error: any) {
     res.status(500).json({ 
@@ -97,13 +101,18 @@ export const sellService = async (req: Request, res: Response) => {
   }
 };
 
+
 export const buyService = async (req: Request, res: Response) => {
   try {
-    const { buyerSecret, serviceId } = req.body;
+    const { buyerSecret, serviceId, assetCode, issuerPublicKey } = req.body;
+
     const result = await stellarService.buyService({ 
       buyerSecret, 
-      serviceId 
+      serviceId,
+      assetCode,
+      issuerPublicKey
     });
+
     res.status(result.success ? 200 : 400).json(result);
   } catch (error: any) {
     res.status(500).json({ 
@@ -113,6 +122,7 @@ export const buyService = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 
 export const getAccountBalance = async (req: Request, res: Response) => {

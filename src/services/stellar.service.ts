@@ -5,10 +5,15 @@ import Server from "@stellar/stellar-sdk";
 import { Transaction } from '@stellar/stellar-sdk';
 import * as stellarDao from '../dao/stellar.dao';
 import * as StellarTypes from '../types/stellar.types';
+
 const server = new Horizon.Server('https://horizon-testnet.stellar.org');
 
+// import dotenv from 'dotenv';
+// dotenv.config();
 
-export const BLUD_ASSET = new Asset('BLUD', 'GAHPJJR5VZNEU3PXUUNI7HAG4D7USDBPJCZRLZDFIBMPWEMRWR7D3O2D');
+// export const BLUD_ASSET = new Asset('BLUD', 'GAHPJJR5VZNEU3PXUUNI7HAG4D7USDBPJCZRLZDFIBMPWEMRWR7D3O2D');
+// export const BLUD_ASSET = new Asset('BLUD', process.env.ISSUER_PUBLIC_KEY);
+
 
 export const createAccount = async () => {
   const pair = Keypair.random();
@@ -227,20 +232,22 @@ export const sellService = async ({
   sellerSecret,
   serviceName,
   description,
-  bludAmount
+  bludAmount,
+  assetCode,
+  issuerPublicKey
 }: StellarTypes.SellServiceRequest): Promise<StellarTypes.StellarResult> => {
   try {
     const sellerKeypair = Keypair.fromSecret(sellerSecret);
     const sellerAccount = await server.loadAccount(sellerKeypair.publicKey());
 
-    console.log('BALANCES:', sellerAccount.balances);
-    // Check if BLUD balance exists and is sufficient
+    const asset = new Asset(assetCode, issuerPublicKey);
+
     const bludBalance = sellerAccount.balances.find(
       b =>
         'asset_code' in b &&
-        b.asset_code === BLUD_ASSET.code &&
+        b.asset_code === asset.getCode() &&
         'asset_issuer' in b &&
-        b.asset_issuer === BLUD_ASSET.issuer
+        b.asset_issuer === asset.getIssuer()
     );
 
     if (!bludBalance || parseFloat((bludBalance as any).balance) < parseFloat(bludAmount)) {
@@ -273,11 +280,13 @@ export const sellService = async ({
 };
 
 
+
 export const buyService = async ({
   buyerSecret,
   serviceId
 }: StellarTypes.BuyServiceRequest): Promise<StellarTypes.StellarResult> => {
   try {
+    // 1. Fetch service
     const service = await stellarDao.getService(serviceId);
     if (!service || service.status !== 'available') {
       return {
@@ -289,13 +298,20 @@ export const buyService = async ({
     const buyerKeypair = Keypair.fromSecret(buyerSecret);
     const buyerAccount = await server.loadAccount(buyerKeypair.publicKey());
 
+    // 2. Dynamically build asset from DB
+    const assetCode = 'BLUD'; // or get from service if stored there
+    const issuerPublicKey = process.env.ISSUER_PUBLIC_KEY!; // fallback or also store in DB
+    const bludAsset = new Asset(assetCode, issuerPublicKey);
+
     console.log('Buyer Balances:', buyerAccount.balances);
+
+    // 3. Check balance
     const hasTrustline = buyerAccount.balances.some(
       b =>
         'asset_code' in b &&
-        b.asset_code === BLUD_ASSET.code &&
+        b.asset_code === bludAsset.code &&
         'asset_issuer' in b &&
-        b.asset_issuer === BLUD_ASSET.issuer
+        b.asset_issuer === bludAsset.issuer
     );
 
     if (!hasTrustline) {
@@ -305,13 +321,29 @@ export const buyService = async ({
       };
     }
 
+    const buyerBalance = buyerAccount.balances.find(
+      b =>
+        'asset_code' in b &&
+        b.asset_code === bludAsset.code &&
+        'asset_issuer' in b &&
+        b.asset_issuer === bludAsset.issuer
+    );
+
+    if (!buyerBalance || parseFloat((buyerBalance as any).balance) < parseFloat(service.blud_price)) {
+      return {
+        success: false,
+        message: 'Insufficient BLUD balance to complete purchase'
+      };
+    }
+
+    // 4. Send payment
     const transaction = new TransactionBuilder(buyerAccount, {
       fee: '100',
       networkPassphrase: Networks.TESTNET,
     })
       .addOperation(Operation.payment({
         destination: service.seller_public_key,
-        asset: BLUD_ASSET,
+        asset: bludAsset,
         amount: service.blud_price,
       }))
       .setTimeout(30)
@@ -320,8 +352,10 @@ export const buyService = async ({
     transaction.sign(buyerKeypair);
     const paymentResult = await server.submitTransaction(transaction);
 
+    // 5. Update service
     await stellarDao.updateService(serviceId, { status: 'sold' });
 
+    // 6. Log transaction
     const serviceTransaction = await stellarDao.createServiceTransaction({
       service_id: serviceId,
       buyer_public_key: buyerKeypair.publicKey(),
@@ -339,21 +373,23 @@ export const buyService = async ({
       }
     };
   } catch (error: any) {
-  console.error('Buy Service Error:', error?.response?.data || error.message || error);
-  return {
-    success: false,
-    message: 'Failed to purchase service',
-    error: error?.response?.data || error.message
-  };
-}
-}
+    console.error('Buy Service Error:', error?.response?.data || error.message || error);
+    return {
+      success: false,
+      message: 'Failed to purchase service',
+      error: error?.response?.data || error.message
+    };
+  }
+};
+
+
 
 
 
 export const getAccountBalance = async (publicKey: string): Promise<StellarTypes.StellarResult> => {
   try {
     const account = await server.loadAccount(publicKey);
-    
+
     const balances = account.balances.map(b => ({
       asset_type: b.asset_type,
       asset_code: 'asset_code' in b ? b.asset_code : 'XLM',
