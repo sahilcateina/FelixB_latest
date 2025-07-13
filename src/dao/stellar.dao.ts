@@ -110,7 +110,20 @@ export const saveStellarAccount = async (publicKey: string, secretKey: string) =
 
 
 
-
+  export const getAvailableServices = async () => {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      //.eq('status', 'available')
+      .order('created_at', { ascending: false });
+  
+    if (error) {
+      throw new Error(`Error fetching available services: ${error.message}`);
+    }
+  
+    return data;
+  };
+  
 
 
 

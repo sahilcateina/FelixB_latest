@@ -101,6 +101,22 @@ export const getAccountBalance = async (req: Request, res: Response) => {
   }
 };
 
+export const getAvailableServices = async (req: Request, res: Response) => {
+  try {
+    const result = await stellarService.getAvailableServices();
+    res.status(200).json({
+      success: true,
+      message: 'Available services fetched successfully',
+      data: result
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch available services',
+      error: error.message
+    });
+  }
+};
 
 
 

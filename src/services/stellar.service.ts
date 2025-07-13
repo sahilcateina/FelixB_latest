@@ -297,6 +297,11 @@ export const getAccountBalance = async (publicKey: string): Promise<StellarTypes
 
 
 
+export const getAvailableServices = async () => {
+  return await stellarDao.getAvailableServices();
+};
+
+
 
 
 
