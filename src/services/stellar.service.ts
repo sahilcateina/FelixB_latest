@@ -71,48 +71,6 @@ export const sendXLM = async (
 
 
 
-// export const createCurrency = async ({
-//   issuerSecret,
-//   distributorPublicKey,
-//   assetCode,
-//   amount,
-// }: StellarTypes.CreateCurrencyRequest): Promise<StellarTypes.StellarResult> => {
-//   try {
-//     const issuerKeypair = Keypair.fromSecret(issuerSecret);
-//     const issuerAccount = await server.loadAccount(issuerKeypair.publicKey());
-//     const customAsset = new Asset(assetCode, issuerKeypair.publicKey());
-
-//     const transaction = new TransactionBuilder(issuerAccount, {
-//       fee: '100',
-//       networkPassphrase: Networks.TESTNET,
-//     })
-//       .addOperation(Operation.payment({
-//         destination: distributorPublicKey,
-//         asset: customAsset,
-//         amount,
-//       }))
-//       .setTimeout(30)
-//       .build();
-
-//     transaction.sign(issuerKeypair);
-//     const result = await server.submitTransaction(transaction);
-
-//     return {
-//       success: true,
-//       message: `Issued ${amount} ${assetCode} to ${distributorPublicKey}`,
-//       result,
-//     };
-//   } catch (error: any) {
-//     console.error('Issue Token Error:', error?.response?.data || error.message || error);
-//     return {
-//       success: false,
-//       message: 'Failed to issue token',
-//       error: error?.response?.data || error.message
-//     };
-//   }
-// };
-
-
 export const createAssetOnly = async ({
   issuerSecret,
   assetCode,
@@ -283,10 +241,11 @@ export const sellService = async ({
 
 export const buyService = async ({
   buyerSecret,
-  serviceId
+  serviceId,
+  assetCode,
+  issuerPublicKey
 }: StellarTypes.BuyServiceRequest): Promise<StellarTypes.StellarResult> => {
   try {
-    // 1. Fetch service
     const service = await stellarDao.getService(serviceId);
     if (!service || service.status !== 'available') {
       return {
@@ -298,14 +257,10 @@ export const buyService = async ({
     const buyerKeypair = Keypair.fromSecret(buyerSecret);
     const buyerAccount = await server.loadAccount(buyerKeypair.publicKey());
 
-    // 2. Dynamically build asset from DB
-    const assetCode = 'BLUD'; // or get from service if stored there
-    const issuerPublicKey = process.env.ISSUER_PUBLIC_KEY!; // fallback or also store in DB
     const bludAsset = new Asset(assetCode, issuerPublicKey);
 
     console.log('Buyer Balances:', buyerAccount.balances);
 
-    // 3. Check balance
     const hasTrustline = buyerAccount.balances.some(
       b =>
         'asset_code' in b &&
@@ -336,7 +291,6 @@ export const buyService = async ({
       };
     }
 
-    // 4. Send payment
     const transaction = new TransactionBuilder(buyerAccount, {
       fee: '100',
       networkPassphrase: Networks.TESTNET,
@@ -352,10 +306,8 @@ export const buyService = async ({
     transaction.sign(buyerKeypair);
     const paymentResult = await server.submitTransaction(transaction);
 
-    // 5. Update service
     await stellarDao.updateService(serviceId, { status: 'sold' });
 
-    // 6. Log transaction
     const serviceTransaction = await stellarDao.createServiceTransaction({
       service_id: serviceId,
       buyer_public_key: buyerKeypair.publicKey(),
@@ -381,6 +333,7 @@ export const buyService = async ({
     };
   }
 };
+
 
 
 
