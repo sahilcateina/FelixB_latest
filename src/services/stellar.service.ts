@@ -71,6 +71,36 @@ export const sendXLM = async (
 
 
 
+// export const createAssetOnly = async ({
+//   issuerSecret,
+//   assetCode,
+// }: {
+//   issuerSecret: string;
+//   assetCode: string;
+// }): Promise<StellarTypes.StellarResult> => {
+//   try {
+//     const issuerKeypair = Keypair.fromSecret(issuerSecret);
+//     const issuerAccount = await server.loadAccount(issuerKeypair.publicKey());
+//     const customAsset = new Asset(assetCode, issuerKeypair.publicKey());
+
+//     // Dummy transaction to "register" asset (optional in real Stellar, for bookkeeping)
+//     return {
+//       success: true,
+//       message: `Asset ${assetCode} is now defined under issuer ${issuerKeypair.publicKey()}`,
+//       result: {
+//         asset_code: assetCode,
+//         issuer: issuerKeypair.publicKey()
+//       }
+//     };
+//   } catch (error: any) {
+//     return {
+//       success: false,
+//       message: 'Failed to define asset',
+//       error: error.message,
+//     };
+//   }
+// };
+
 export const createAssetOnly = async ({
   issuerSecret,
   assetCode,
@@ -80,17 +110,20 @@ export const createAssetOnly = async ({
 }): Promise<StellarTypes.StellarResult> => {
   try {
     const issuerKeypair = Keypair.fromSecret(issuerSecret);
-    const issuerAccount = await server.loadAccount(issuerKeypair.publicKey());
-    const customAsset = new Asset(assetCode, issuerKeypair.publicKey());
+    const issuerPublicKey = issuerKeypair.publicKey();
+    const issuerAccount = await server.loadAccount(issuerPublicKey);
+    const customAsset = new Asset(assetCode, issuerPublicKey);
 
-    // Dummy transaction to "register" asset (optional in real Stellar, for bookkeeping)
+    // Save asset to Supabase
+    const assetRecord = await stellarDao.saveAsset({
+      asset_code: assetCode,
+      issuer_public_key: issuerPublicKey
+    });
+
     return {
       success: true,
-      message: `Asset ${assetCode} is now defined under issuer ${issuerKeypair.publicKey()}`,
-      result: {
-        asset_code: assetCode,
-        issuer: issuerKeypair.publicKey()
-      }
+      message: `Asset ${assetCode} created and stored successfully`,
+      result: assetRecord
     };
   } catch (error: any) {
     return {
@@ -371,7 +404,9 @@ export const getAvailableServices = async () => {
 };
 
 
-
+export const getAllAssets = async () => {
+  return await stellarDao.getAllAssets();
+};
 
 
 

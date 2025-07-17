@@ -157,6 +157,22 @@ export const getAvailableServices = async (req: Request, res: Response) => {
 };
 
 
+export const getAllAssets = async (_req: Request, res: Response) => {
+  try {
+    const assets = await stellarService.getAllAssets();
+    res.status(200).json({
+      success: true,
+      message: 'Fetched all created assets',
+      result: assets
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch assets',
+      error: error.message
+    });
+  }
+};
 
 
 

@@ -18,7 +18,7 @@ router.post('/service/buy', stellarController.buyService);
 router.get('/account/balance/:publicKey', stellarController.getAccountBalance);
 router.get('/service', stellarController.getAvailableServices);
 
-
+router.get('/assets', stellarController.getAllAssets);
 
 
 export default router;
