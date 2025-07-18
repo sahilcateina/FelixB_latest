@@ -176,6 +176,26 @@ export const getAllAssets = async (_req: Request, res: Response) => {
 
 
 
+export const getBalancesFromIssuer = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { issuerSecret, assetCode } = req.body;
+
+    if (!issuerSecret || !assetCode) {
+      res.status(400).json({ success: false, message: 'issuerSecret and assetCode are required' });
+      return;
+    }
+
+    const result = await stellarService.getBalancesFromIssuer(issuerSecret, assetCode);
+    res.status(200).json({ success: true, message: 'Balances fetched', result });
+
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch balances from issuer',
+      error: error.message,
+    });
+  }
+};
 
 
 

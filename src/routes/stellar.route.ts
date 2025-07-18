@@ -20,6 +20,7 @@ router.get('/service', stellarController.getAvailableServices);
 
 router.get('/assets', stellarController.getAllAssets);
 
+router.post('/issuer/balances', stellarController.getBalancesFromIssuer);
 
 export default router;
 

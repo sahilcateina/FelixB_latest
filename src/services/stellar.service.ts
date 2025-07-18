@@ -409,6 +409,70 @@ export const getAllAssets = async () => {
 };
 
 
+export const getBalancesFromIssuer = async (
+  issuerSecret: string,
+  assetCode: string
+) => {
+  const issuerKeypair = Keypair.fromSecret(issuerSecret);
+  const issuerPublicKey = issuerKeypair.publicKey();
+  const recipients = new Set<string>();
+
+  const payments = await server
+    .payments()
+    .forAccount(issuerPublicKey)
+    .order('desc')
+    .limit(200)
+    .call();
+
+  payments.records.forEach((op: any) => {
+    if (
+      op.type === 'payment' &&
+      op.asset_type !== 'native' &&
+      op.asset_code === assetCode &&
+      op.asset_issuer === issuerPublicKey
+    ) {
+      recipients.add(op.to);
+    }
+  });
+
+  const results: {
+    publicKey: string;
+    balance: string | null;
+    error?: string;
+  }[] = [];
+
+  for (const publicKey of recipients) {
+    try {
+      const account = await server.loadAccount(publicKey);
+
+      const bludBalance = account.balances.find(b => {
+        // Type narrowing
+        if (
+          (b.asset_type === 'credit_alphanum4' || b.asset_type === 'credit_alphanum12') &&
+          b.asset_code === assetCode &&
+          b.asset_issuer === issuerPublicKey
+        ) {
+          return true;
+        }
+        return false;
+      });
+
+      results.push({
+        publicKey,
+        balance: bludBalance ? bludBalance.balance : '0',
+      });
+    } catch (err: any) {
+      results.push({
+        publicKey,
+        balance: null,
+        error: err.message,
+      });
+    }
+  }
+
+  return results;
+};
+
 
 
 
