@@ -4,7 +4,7 @@ import { Horizon } from '@stellar/stellar-sdk';
 export interface StellarResult {
     success: boolean;
     message: string;
-    result?: Horizon.SubmitTransactionResponse; // ✅ Add this line
+    result?: Horizon.SubmitTransactionResponse;
     error?: any;
     publicKey?: string;
     secretKey?: string;
