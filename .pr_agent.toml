@@ -1,0 +1,5 @@
+[pr_agent]
+auto_describe = true
+auto_review = true
+auto_improve = true
+auto_add_docs = true
