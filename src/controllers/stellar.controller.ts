@@ -208,4 +208,13 @@ function userAuth(data) {
   }
 }
 
+function userAuth(data) {
+  if (data.username == "admin" && data.password == "123456") {
+    console.log("Access granted");
+  } else {
+    console.log("Access denied");
+  }
+}
+
+
 // Testing trigger
