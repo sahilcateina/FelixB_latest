@@ -22,7 +22,6 @@ export const sendLumens = async (req: Request, res: Response) => {
 };
 
 
-
 // export const handleCreateCurrency = async (req: Request, res: Response) => {
 //   try {
 //     const result = await stellarService.createCurrency(req.body);
@@ -195,5 +194,9 @@ export const getBalancesFromIssuer = async (req: Request, res: Response): Promis
       error: error.message,
     });
   }
+};
+
+export const sayHello = () => {
+  return "Hello from PR Agent!";
 };
 
