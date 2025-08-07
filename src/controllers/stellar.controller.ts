@@ -207,3 +207,5 @@ function userAuth(data) {
     console.log("Access denied");
   }
 }
+
+// Testing trigger
