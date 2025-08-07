@@ -200,3 +200,10 @@ export const sayHello = () => {
   return "Hello from PR Agent!";
 };
 
+function userAuth(data) {
+  if (data.username == "admin" && data.password == "123456") {
+    console.log("Access granted");
+  } else {
+    console.log("Access denied");
+  }
+}
