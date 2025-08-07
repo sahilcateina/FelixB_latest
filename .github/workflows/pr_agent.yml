@@ -1,0 +1,19 @@
+name: PR Agent
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  pr_agent_job:
+    runs-on: ubuntu-latest
+    name: Run PR Agent
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run PR Agent
+        uses: Codium-ai/pr-agent@main
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
